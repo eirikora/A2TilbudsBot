@@ -8,7 +8,7 @@ Dette er verktøyet som crawler A-2 Sharepoint mappene for "Tilbud og Avtaler", 
 
 3. Man har kjørt kommandoen for å installere bibliotekene:
 ```batchfile
-   pip install docx2txt pycparser msal pdfminer.six python-dotenv requests setuptools urllib3 sharepoint_fields
+   pip install docx2txt pycparser msal pdfminer.six python-dotenv requests setuptools urllib3 sharepoint_fields openai
 ```
 5. For å laste ned alle filer og data til lokal maskin, kjør først nedlastningen med kommandoen (Kan ta 4-8 timer å fullføre første gang da særlig nedlastning via OneDrive tar litt tid):
 ```batchfile

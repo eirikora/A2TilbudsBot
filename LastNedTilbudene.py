@@ -86,7 +86,7 @@ try:
                         sequence_number += 1
                         unique_name = generate_unique_name(file_path, sequence_number)
 
-                        print(f"- Laster ned #{sequence_number}: {file_path}")
+                        print(f"- Laster ned #{sequence_number}: {file_path} som {unique_name}")
 
                         # Lagre teksten til en fil
                         if not os.path.exists(output_folder):
@@ -101,7 +101,8 @@ try:
 
                         # Hent Sharepoint metadata for file og lagre
                         file_fields = requestSharepointFields(sharepoint_site=sharepoint_site, site_name=site_name, drive_name=drive_name, file_relative_path=PATH.replace('\\', '/'))
-                        file_metadata[file_path] = file_fields
+                        file_metadata[unique_name] = file_fields
+                        #print(f"SAVED {unique_name} file_fields!")
 
                         # Insert header at top and write file
                         text = make_header(file_fields) + "Document body:\n" + text
