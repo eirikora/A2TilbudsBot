@@ -203,6 +203,7 @@ file_paths = []
 found_corefilenames = []
 project_path_urls = {}
 previous_rootfolder = "_undefined_"
+previous_link = "_undefined_"
 for filename in downloaded_file_urls.keys():
     file_path = os.path.join(output_dir, filename)
     fileurl = downloaded_file_urls[filename]
@@ -212,13 +213,13 @@ for filename in downloaded_file_urls.keys():
     corefilename, extension = os.path.splitext(urlfilename)
     root_folder = relativeurl.split('/')[1]
 
-    if root_folder != previous_rootfolder:
+    if root_folder != previous_rootfolder and previous_rootfolder != "_undefined_":
         print("ANALYSE AV:" + urllib.parse.unquote(root_folder, encoding='utf-8'))
         found_corefilenames = []
         # Concatenate all files in project into just one file.
         project_out_file = f"{project_dir}\\{projects_found:04d}_{previous_rootfolder}.txt"
         project_link = rooturl + root_folder
-        project_path_urls[project_out_file] = project_link
+        project_path_urls[project_out_file] = previous_link
         with open(project_out_file, 'w', encoding='utf-8') as p_outfile:
             unquoted_previous_rootfolder = urllib.parse.unquote(previous_rootfolder, encoding='utf-8')
             p_outfile.write(f"TILBUD:{unquoted_previous_rootfolder}\n")
@@ -252,14 +253,38 @@ for filename in downloaded_file_urls.keys():
     #else:
     #    print(" SKIP:" + relativeurl)
     previous_rootfolder = root_folder
+    previous_link = project_link
 
-# TODO: ALSO WRITE THE VERY LAST PROJECT TO FILE (AND NOT WRITE file 0000 !)
+# Concatenate files in the very last project folder into just one file.
+project_out_file = f"{project_dir}\\{projects_found:04d}_{previous_rootfolder}.txt"
+project_link = rooturl + root_folder
+project_path_urls[project_out_file] = previous_link
+with open(project_out_file, 'w', encoding='utf-8') as p_outfile:
+    unquoted_previous_rootfolder = urllib.parse.unquote(previous_rootfolder, encoding='utf-8')
+    p_outfile.write(f"TILBUD:{unquoted_previous_rootfolder}\n")
+    for found_file in file_paths:
+        p_outfile.write("\n\n------\n")
+        with open(found_file, 'r', encoding='utf-8') as infile:
+            maxlines = 700
+            if is_a_CV(found_file):
+                maxlines = 10 # Only the first lines of the CVs
+            #else:
+            #    print((f"** NOT CV ** {found_file}"))
+            for _ in range(maxlines): 
+                line = infile.readline()
+                if not line: # Stop if there are no more lines
+                    break
+                p_outfile.write(line)
+
 print(f"Found {files_found} relevant files for upload!")
 print(f"Written as {projects_found} concatenated project files.")
 
 # Write raw tilbud/project mapping-file
 with open('project_mapping.csv', 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.writer(csvfile)
+    # Write the header
+    writer.writerow(['Filename', 'URL'])
+
     for project_file in project_path_urls.keys():
         # Skriv til mapping-filen
         url = project_path_urls[project_file]
@@ -277,6 +302,9 @@ if projects_found > 0:
 # Write summary mapping-file
 with open('summary_mapping.csv', 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.writer(csvfile)
+    # Write the header
+    writer.writerow(['Filename', 'URL'])
+
     for summary_file in summarized_tilbud_urls.keys():
         # Skriv til mapping-filen
         url = summarized_tilbud_urls[summary_file]
