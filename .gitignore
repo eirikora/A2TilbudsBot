@@ -1,7 +1,11 @@
 download-regulation-reports.csv
 downloaded_files.csv
 downloaded_files
+concatenated_projects
+summarized_projects
 nedlastede_file*
+OLD_*
+OLD2_*
 .venv
 .env
 .DS_Store
@@ -20,3 +24,9 @@ file_metadata.json
 sequence_number.json
 DATA_BACKUP_2024-10-10/OLD_file_dates.json
 DATA_BACKUP*
+Downloaded overview.xlsx
+OLD2_project_mapping.csv
+project_mapping.csv
+summary_mapping.csv
+asst_2_sourcemap.csv
+asst_sourcemap.csv
