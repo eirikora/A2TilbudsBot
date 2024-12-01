@@ -1,11 +1,19 @@
 import os
 import openai
+import logging
 from dotenv import load_dotenv
 import csv
 import json
 from pathlib import Path
 from datetime import datetime
 import urllib.parse
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(), logging.FileHandler("pipeline_download.log")]
+)
 
 # Get the current date and time
 current_datetime = datetime.now()
@@ -14,7 +22,7 @@ formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
 # Load environment variables
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-client = openai.OpenAI(api_key=openai.api_key)
+OpenAIclient = openai.OpenAI(api_key=openai.api_key)
 
 # Directory containing the files
 output_dir = 'downloaded_files'
@@ -60,6 +68,206 @@ else:
     print(f"Required file {project_database} for concatenated project files does not exist.")
     exit(1) """
 
+# define a retry decorator
+def retry_with_exponential_backoff(
+    func,
+    initial_delay: float = 1,
+    exponential_base: float = 2,
+    jitter: bool = True,
+    max_retries: int = 10,
+    errors: tuple = (openai.RateLimitError,),
+):
+    """Retry a function with exponential backoff."""
+ 
+    def wrapper(*args, **kwargs):
+        # Initialize variables
+        num_retries = 0
+        delay = initial_delay
+ 
+        # Loop until a successful response or max_retries is hit or an exception is raised
+        while True:
+            try:
+                return func(*args, **kwargs)
+ 
+            # Retry on specific errors
+            except errors as e:
+                # Increment retries
+                num_retries += 1
+ 
+                # Check if max retries has been reached
+                if num_retries > max_retries:
+                    raise Exception(
+                        f"Maximum number of retries ({max_retries}) exceeded."
+                    )
+ 
+                # Increment the delay
+                delay *= exponential_base * (1 + jitter * random.random())
+ 
+                # Sleep for the delay
+                time.sleep(delay)
+ 
+            # Raise exceptions for any errors not specified
+            except Exception as e:
+                raise e
+ 
+    return wrapper
+    
+@retry_with_exponential_backoff
+def Query_OpenAI_Completion(instruction, query_text):
+    # Call the OpenAI API for a general ChatGPT chat completion
+    try:
+        # Call OpenAI's completion API for ChatGPT
+        completion = OpenAIclient.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": instruction},
+                {
+                    "role": "user",
+                    "content": query_text
+                }
+            ]
+        )
+        # Extract and return the OpenAI ChatgTP response
+        #return completion.choices[0].message
+        # Extract and return the OpenAI ChatGPT response content only
+        response_content = completion.choices[0].message.content
+        
+        # Check if the response content is in JSON format and strip it if needed
+        if response_content.startswith("```json"):
+            response_content = response_content.strip("```json\n").strip("```")
+        
+        return response_content
+    
+    except Exception as e:
+        logging.warning(f"An error occurred: {e}")
+        return None
+
+import json
+
+@retry_with_exponential_backoff
+def Query_OpenAI_Completion_JSON(instruction, query_text):
+    """
+    Calls the OpenAI API to analyze CV content and return the result as a JSON object.
+    
+    Args:
+        instruction (str): The system instruction for the assistant.
+        query_text (str): The consultant's anonymized CV text.
+
+    Returns:
+        dict: Parsed JSON response from OpenAI if successful, or None if there's an error.
+    """
+    try:
+        # Call OpenAI's completion API for ChatGPT
+        completion = OpenAIclient.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": instruction},
+                {"role": "user", "content": query_text}
+            ]
+        )
+        
+        # Extract the response content
+        response_content = completion.choices[0].message.content
+
+        # Check if the response content is in JSON format and strip if needed
+        if response_content.startswith("```json"):
+            response_content = response_content.strip("```json\n").strip("```")
+        
+        # Attempt to parse response content as JSON
+        try:
+            return json.loads(response_content)
+        except json.JSONDecodeError as json_error:
+            logging.error(f"Failed to decode JSON response: {json_error}")
+            logging.error(f"Response content was: {response_content}")
+            return None
+    
+    except Exception as e:
+        logging.warning(f"An error occurred: {e}")
+        return None
+
+def Query_OpenAI_Assistant(assistant_id, query_text):
+    # Call the OpenAI API for a chat completion from a predefined assistant
+    myassistant = OpenAIclient.beta.assistants.retrieve(assistant_id)
+    #print(myassistant.name)
+
+    mythread = OpenAIclient.beta.threads.create()
+    #print(empty_thread)
+
+    message = OpenAIclient.beta.threads.messages.create(
+        thread_id=mythread.id,
+        role="user",
+        content=query_text
+    )
+
+    run = OpenAIclient.beta.threads.runs.create_and_poll(
+        thread_id=mythread.id,
+        assistant_id=myassistant.id
+    )
+
+    response = ""
+    if run.status == 'completed': 
+        messages = OpenAIclient.beta.threads.messages.list(
+            thread_id=mythread.id
+        )
+        response = messages.data[0].content[0].text.value
+    else:
+        print(run.status)
+
+    return response
+
+Kompetansekrav_Instruction = """
+Du er en tjeneste som mottar en samling dokumenter om forespørsel (om konsulentbistand eller rammeavtale om konsulentbistand) og tilhørende tilbud fra konsulentselskapet A-2 Norge og deres partnere. 
+Du skal som tjeneste returnere informasjon i en presis, flat JSON-struktur.
+Du mottar teksten som er i alle dokumentene i tilfeldig rekkefølge, adskilt med en metadata seksjoner, som inkluderer kundens forespørsel om tjenester og A-2 Norges svar på denne forespørselen.
+Følg disse trinnene for å ekstrahere riktig informasjon:
+
+Trinn 1: Gjennomgå Dokumentene
+Identifiser dokumentene: Finn dokumentene som gjelder kundens forespørsel.
+
+Trinn 2: Trekk ut alle konsulentroller som etterspørres og kravene til konsulentrollen.
+Noen forespørsler har ikke beskrevet hvilke konsulentroller som kreves. Da er konsulentrolle "Ingen".
+
+Trinn 3: For hver konsulentrolle som beskrives, trekk ut all informasjon etterspurt i JSON-strukturen nedenfor. En rad per konsulentrolle. 
+
+Trinn 4: Instruksjon for svar:
+Du skal kun returnere en flat JSON-struktur uten underliggende objekter eller lister, og som følger disse regler:
+1. Bruk eksakt samme nøkkelnavn som angitt i strukturen. Ingen variasjoner i store og små bokstaver, ingen ekstra mellomrom eller spesialtegn.
+2. Returner alle felter som type tekststreng. Hvis verdien er ukjent returner en tom streng.
+3. For årstall returner enten årstallet (4 tall) eller strengen "ukjent".
+
+Besvar med følgende JSON feltstruktur som er en liste med objekter og her vises en:
+[{
+    "Konsulentrolle": "Kort navn på rolle, f.eks. 'Prosjektleder for prosjekt x'",
+    "Rollekategori": "Kategorisert rollen som f.eks. Prosjektleder, Arkitekt, Endringsleder, Testleder, Kvalitetssikrer.",
+    "Kompetansekrav": "Hvilken kompetanse må konsulenten ha?",
+    "Erfaringskrav": "Hvilken erfaring må konsulenten ha?",
+    "Konsulentegenskaper": "Hvilke egenskaper må konsulenten ha?",
+    "Kundenavn": "Hvilken virksomhet har sendt forespørselen?",
+    "Bransje": "Hvilken bransje gjelder forespørselen?",
+    "Årstall": "Hvilket år ble forespørselen sendt?"
+}]
+"""
+
+def ekstraher_kompetansekrav(file_path):
+    file_body = ""
+    competency_info = None
+    if os.path.exists(file_path): # Cannot generate summary if file does not exist
+        with open(file_path, 'r', encoding='utf-8') as infile:
+            maxlines = 6400 # Reading max 7000 lines to avoid too long document for OpenAI assistant to summarize
+            for _ in range(maxlines):
+                line = infile.readline()
+                if not line: # Stop if there are no more lines
+                    break
+                file_body += line
+
+        print(f"Ekstraherer kompetansekrav fra {file_path}")
+        # Analyze all text with OpenAI assistant
+        try:
+            competency_info = Query_OpenAI_Completion_JSON(Kompetansekrav_Instruction, file_body)
+        except Exception as e:
+            print(f"Error analyzing folder {file_path}: {e}")
+    return competency_info
+
 def oppsummer_tilbud(file_path):
     # Construct the full output file path
     filename = os.path.basename(file_path)
@@ -81,26 +289,26 @@ def oppsummer_tilbud(file_path):
             print(f"Oppsummering av tilbud {file_path}")
 
             # Call the OpenAI API for a chat completion
-            myassistant = client.beta.assistants.retrieve(summary_assistant_id)
+            myassistant = OpenAIclient.beta.assistants.retrieve(summary_assistant_id)
             #print(myassistant.name)
 
-            mythread = client.beta.threads.create()
+            mythread = OpenAIclient.beta.threads.create()
             #print(empty_thread)
 
-            message = client.beta.threads.messages.create(
+            message = OpenAIclient.beta.threads.messages.create(
                 thread_id=mythread.id,
                 role="user",
                 content=file_body
             )
 
-            run = client.beta.threads.runs.create_and_poll(
+            run = OpenAIclient.beta.threads.runs.create_and_poll(
                 thread_id=mythread.id,
                 assistant_id=myassistant.id
             )
 
             response = ""
             if run.status == 'completed': 
-                messages = client.beta.threads.messages.list(
+                messages = OpenAIclient.beta.threads.messages.list(
                     thread_id=mythread.id
                 )
                 response = messages.data[0].content[0].text.value
@@ -202,6 +410,7 @@ if not os.path.exists(summary_dir):
 file_paths = []
 found_corefilenames = []
 project_path_urls = {}
+project_link = "_undefined_"
 previous_rootfolder = "_undefined_"
 previous_link = "_undefined_"
 for filename in downloaded_file_urls.keys():
@@ -291,6 +500,36 @@ with open('project_mapping.csv', 'w', newline='', encoding='utf-8') as csvfile:
         filename = os.path.basename(project_file)
         writer.writerow([filename, url])
 
+#Ekstraher Kompetansekrav fra alle forespørsler
+alle_kompetansekrav = []
+if projects_found > 0:
+    # Hent ut alle kompetansekrav fra alle prosjektene
+    for pro_path in list(project_path_urls.keys()): #[:25]:
+        kompetanse_krav = ekstraher_kompetansekrav(pro_path)
+        print(kompetanse_krav)
+        if kompetanse_krav != None:
+            for entry in kompetanse_krav:
+                alle_kompetansekrav.append(entry)
+
+# Skriv alle kompetansekrav til CSV fil
+with open('kompetansekrav.csv', 'w', newline='', encoding='utf-8') as csvfile:
+    writer = csv.writer(csvfile)
+    # Write the header
+    writer.writerow(["Konsulentrolle", "Rollekategori", "Kompetansekrav", "Erfaringskrav", "Konsulentegenskaper", "Kundenavn", "Bransje", "Årstall"])
+    # Write the content
+    for kompetanse_krav in alle_kompetansekrav:
+        if kompetanse_krav != None:
+            Konsulentrolle = kompetanse_krav["Konsulentrolle"]
+            Rollekategori = kompetanse_krav["Rollekategori"]
+            Kompetansekrav = kompetanse_krav["Kompetansekrav"]
+            Erfaringskrav = kompetanse_krav["Erfaringskrav"]
+            Konsulentegenskaper = kompetanse_krav["Konsulentegenskaper"]
+            Kundenavn = kompetanse_krav["Kundenavn"]
+            Bransje = kompetanse_krav["Bransje"]
+            Årstall = kompetanse_krav["Årstall"]
+            if Konsulentrolle.lower() != "ingen" and Konsulentrolle != "":
+                writer.writerow([Konsulentrolle, Rollekategori, Kompetansekrav, Erfaringskrav, Konsulentegenskaper, Kundenavn, Bransje, Årstall])
+#exit(0)
 # Oppsummer alle tilbudsdokumenter så de er søkbare
 summarized_tilbud_urls = {}
 if projects_found > 0:
@@ -315,10 +554,10 @@ with open('summary_mapping.csv', 'w', newline='', encoding='utf-8') as csvfile:
 if projects_found > 0:
     # Create Vector Store if not existing
     print(f"Connecting to OpenAI.")
-    client = openai.OpenAI(api_key=openai.api_key)
+    OpenAIclient = openai.OpenAI(api_key=openai.api_key)
 
     print("Creating a vector store. Status below:")
-    vector_store = client.beta.vector_stores.create(
+    vector_store = OpenAIclient.beta.vector_stores.create(
         name=f"Summerte tilbudsfiler A-2 dato {formatted_datetime}"
     )
     print(vector_store)
@@ -347,7 +586,7 @@ if projects_found > 0:
         # Upload the batch
         try:
             print(f"Uploading batch {batch_num} of {len(batch_file_paths)} files. This may take some time...")
-            file_batch = client.beta.vector_stores.file_batches.upload_and_poll(
+            file_batch = OpenAIclient.beta.vector_stores.file_batches.upload_and_poll(
                 vector_store_id=vector_store.id,
                 files=file_streams,
                 chunking_strategy={

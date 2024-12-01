@@ -4,6 +4,7 @@ downloaded_files
 concatenated_projects
 summarized_projects
 nedlastede_file*
+OLD
 OLD_*
 OLD2_*
 .venv
@@ -30,3 +31,4 @@ project_mapping.csv
 summary_mapping.csv
 asst_2_sourcemap.csv
 asst_sourcemap.csv
+*.log
