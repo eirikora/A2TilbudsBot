@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from datetime import datetime
 import urllib.parse
+import random
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -607,3 +609,5 @@ if projects_found > 0:
 
         # Check the status of files
         print(f"Batch {batch_num} upload ended with status: {file_batch.status}!\n")
+
+print(f"Completed uploading {projects_found} summarized projects to vector store: {vector_store.id}!\n")
