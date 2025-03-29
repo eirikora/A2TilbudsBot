@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>Konsulent Kompetanse Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .chart-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #industryBreakdown, #yearBreakdown {
+            max-height: 400px;
+        }
+        #roleDistribution {
+            max-height: 500px;
+        }
+        .filter-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        select {
+            padding: 10px;
+            margin: 0 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Konsulent Kompetanse Analyse</h1>
+    
+    <div class="filter-container">
+        <select id="yearFilter">
+            <option value="">Alle år</option>
+        </select>
+        <select id="industryFilter">
+            <option value="">Alle bransjer</option>
+        </select>
+    </div>
+
+    <div class="dashboard">
+        <div class="chart-container">
+            <h2>Bransjefordeling</h2>
+            <canvas id="industryBreakdown"></canvas>
+        </div>
+        
+        <div class="chart-container">
+            <h2>Årsfordeling</h2>
+            <canvas id="yearBreakdown"></canvas>
+        </div>
+        
+        <div class="chart-container" style="grid-column: span 2;">
+            <h2>Rollefordeling</h2>
+            <canvas id="roleDistribution"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let originalData = [];
+        let industryChart, yearChart, roleChart;
+
+        function loadData() {
+            Papa.parse('kompetansekrav.csv', {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    // Additional data cleaning
+                    originalData = results.data.filter(row => 
+                        row.Bransje && // Ensure Bransje is not empty
+                        row.Bransje.trim() !== '' // Ensure it's not just whitespace
+                    );
+                    populateFilters();
+                    updateCharts(originalData);
+                }
+            });
+        }
+
+        function populateFilters() {
+            const yearFilter = document.getElementById('yearFilter');
+            const industryFilter = document.getElementById('industryFilter');
+            
+            const years = [...new Set(originalData.map(row => row.Årstall).filter(Boolean))].sort();
+            const industries = [...new Set(originalData.map(row => row.Bransje).filter(Boolean))];
+            
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+            
+            industries.forEach(industry => {
+                const option = document.createElement('option');
+                option.value = industry;
+                option.textContent = industry;
+                industryFilter.appendChild(option);
+            });
+
+            yearFilter.addEventListener('change', filterData);
+            industryFilter.addEventListener('change', filterData);
+        }
+
+        function filterData() {
+            const yearFilter = document.getElementById('yearFilter').value;
+            const industryFilter = document.getElementById('industryFilter').value;
+            
+            let filteredData = originalData;
+            
+            if (yearFilter) {
+                filteredData = filteredData.filter(row => row.Årstall === yearFilter);
+            }
+            
+            if (industryFilter) {
+                filteredData = filteredData.filter(row => row.Bransje === industryFilter);
+            }
+            
+            updateCharts(filteredData);
+        }
+
+        function updateCharts(data) {
+            // Industry Breakdown
+            const industryCount = data.reduce((acc, row) => {
+                if (row.Bransje) {
+                    acc[row.Bransje] = (acc[row.Bransje] || 0) + 1;
+                }
+                return acc;
+            }, {});
+
+            if (industryChart) industryChart.destroy();
+            const industryCtx = document.getElementById('industryBreakdown').getContext('2d');
+            industryChart = new Chart(industryCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(industryCount),
+                    datasets: [{
+                        data: Object.values(industryCount),
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    }
+                }
+            });
+
+            // Year Breakdown
+            const yearCount = data.reduce((acc, row) => {
+                if (row.Årstall) {
+                    acc[row.Årstall] = (acc[row.Årstall] || 0) + 1;
+                }
+                return acc;
+            }, {});
+
+            if (yearChart) yearChart.destroy();
+            const yearCtx = document.getElementById('yearBreakdown').getContext('2d');
+            yearChart = new Chart(yearCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(yearCount),
+                    datasets: [{
+                        label: 'Antall konsulentoppdrag',
+                        data: Object.values(yearCount),
+                        backgroundColor: '#36A2EB'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Role Distribution
+            const roleCount = data.reduce((acc, row) => {
+                if (row.Rollekategori) {
+                    acc[row.Rollekategori] = (acc[row.Rollekategori] || 0) + 1;
+                }
+                return acc;
+            }, {});
+
+            if (roleChart) roleChart.destroy();
+            const roleCtx = document.getElementById('roleDistribution').getContext('2d');
+            roleChart = new Chart(roleCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(roleCount),
+                    datasets: [{
+                        label: 'Rollefordeling',
+                        data: Object.values(roleCount),
+                        backgroundColor: '#FF9F40'
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load data when page loads
+        loadData();
+    </script>
+</body>
+</html>

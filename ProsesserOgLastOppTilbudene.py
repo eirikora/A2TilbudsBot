@@ -240,7 +240,7 @@ Du skal kun returnere en flat JSON-struktur uten underliggende objekter eller li
 Besvar med følgende JSON feltstruktur som er en liste med objekter og her vises en:
 [{
     "Konsulentrolle": "Kort navn på rolle, f.eks. 'Prosjektleder for prosjekt x'",
-    "Rollekategori": "Kategorisert rollen som f.eks. Prosjektleder, Arkitekt, Endringsleder, Testleder, Kvalitetssikrer.",
+    "Rollekategori": "Velg en av: Prosjektledelse, Lede agilt team, Programledelse, Endringsledelse, Virksomhetsarkitektur, Løsningsarkitektur, Rådgivning forretning, Rådgivning teknisk, Offentlig kvalitetssikring, Test og kvalitetsikring, Økonomi og analyse, Utviklingsrolle, Produkt- og tjenesteansvar, Prosessledelse og fasilitering, Kurs og opplæring, Midlertidig lederrolle",
     "Kompetansekrav": "Hvilken kompetanse må konsulenten ha?",
     "Erfaringskrav": "Hvilken erfaring må konsulenten ha?",
     "Konsulentegenskaper": "Hvilke egenskaper må konsulenten ha?",

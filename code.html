@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Konsulentbehov Analyse</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #0056b3;
+            text-align: center;
+        }
+
+        h2 {
+            color: #0056b3;
+            margin-top: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select {
+            width: 200px;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        #charts {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+
+        .chart-container {
+            width: 45%;
+            min-width: 300px;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        .chart-container h3 {
+            text-align: center;
+            color: #007bff;
+            font-size: 1.2em;
+        }
+
+        .chart-container canvas {
+            max-height: 300px;
+        }
+
+        #role-details {
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        #role-details h3 {
+            color: #28a745;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        /* Style for search input */
+        #search-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        /* Style for search results container */
+        #search-results {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        /* Style for search results list */
+        #search-results ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        /* Style for individual search results */
+        #search-results li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Style for highlighting search terms */
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+
+        #details-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        #details-container h3 {
+            color: #dc3545;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+
+        #details-container ul {
+            list-style-type: disc;
+            margin-left: 20px;
+        }
+
+        #details-container li {
+            padding: 5px 0;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Konsulentbehov Analyse</h1>
+
+        <label for="customer-select">Velg Kunde:</label>
+        <select id="customer-select">
+            <option value="">Alle</option>
+        </select>
+
+        <label for="year-select">Velg Årstall:</label>
+        <select id="year-select">
+            <option value="">Alle</option>
+        </select>
+
+        <label for="search-input">Søk i Konsulentrolle:</label>
+        <input type="text" id="search-input" placeholder="Søk etter konsulentrolle...">
+        <div id="search-results"></div>
+
+        <div id="charts">
+            <div class="chart-container">
+                <h3>Rollekategori Fordeling</h3>
+                <canvas id="role-chart"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <h3>Bransje Fordeling</h3>
+                <canvas id="industry-chart"></canvas>
+            </div>
+        </div>
+
+        <div id="role-details">
+            <h3>Detaljer om valgt Konsulentrolle</h3>
+            <div id="details-container"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const csvData = `"Konsulentrolle","Rollekategori","Kompetansekrav","Erfaringskrav","Konsulentegenskaper","Kundenavn","Bransje","Årstall"
+"Oppdragsleder, ekstern kvalitetssikrer og rådgiver","Kvalitetssikrer","Kompetanse i kvalitetssikring, kjennskap til Statens prosjektmodell, prosjektstyringsmetoder som PRINCE2, Scrum, Kanban, DevOps","Erfaring fra kvalitetssikring av store prosjekter, inkludert tidligere erfaring med Autosys-prosjektet og Statens vegvesens rammebetingelser","God metodisk tilnærming, evne til å gjennomføre løpende dialog og kvalitetsgjennomganger, evne til å tilpasse smidige gjennomføringsmodeller","Statens vegvesen","Offentlig og stat",2015
+"Ekstern kvalitetssikrer og rådgiver","Kvalitetssikrer","Kompetanse i kvalitetssikring, kjennskap til Statens prosjektmodell, prosjektstyringsmetoder som PRINCE2, Scrum, Kanban, DevOps","Erfaring fra kvalitetssikring av store prosjekter, inkludert tidligere erfaring med Autosys-prosjektet og Statens vegvesens rammebetingelser","God metodisk tilnærming, evne til å gjennomføre løpende dialog og kvalitetsgjennomganger, evne til å tilpasse smidige gjennomføringsmodeller","Statens vegvesen","Offentlig og stat",2015
+"Innkjøpsfaglig ansvarlig","Merkantil leder",,,,"Helse Midt-Norge RHF","Helse",2015
+"Informasjonsarkitekt","Arkitekt",,,,"Helse Midt-Norge RHF","Helse",2015
+"Ansvarlig for strategiske føringer","Strategisk rådgiver",,,,"Helse Midt-Norge RHF","Helse",2015
+"Arkitekt for datamigrering","Arkitekt",,,,"Helse Midt-Norge RHF","Helse",2015
+"MDM-løsning etablering","Dataforvalter",,,,"Helse Midt-Norge RHF","Helse",2015
+"Prosjektledelse og generell bistand til omstilling","Prosjektleder","Kompetanse i prosjektledelse, omorganisering, endringsledelse","Erfaring med organisasjonsomstillinger og strategisk endringsarbeid i komplekse virksomheter","Gode kommunikasjonsferdigheter, evne til å forankre endring, lederstøtte","Oslo Kommune, Deichman","Kommuner",2016
+"Endringsledelse i forbindelse med flytting til Bjørvika","Endringsleder","Kompetanse i endringsledelse, organisasjonsutvikling, kompetansekartlegging","Erfaring med ledelse av endringsprosesser og utvikling av organisasjonsmodeller","Rådgivningsevner, problemløsning, lederstøtte","Oslo Kommune, Deichman","Kommuner",2016
+"Prosjektleder for dokumenthåndtering og informasjonsforvaltning","Prosjektleder","Kunnskap om dokumenthåndtering, informasjonsforvaltning og saks- og arkivsystemer","Erfaring med analyse, kravspesifikasjon og implementering av sak-/arkivløsninger","Evne til å lede prosjekter og samarbeid med offentlig sektor","Ruter AS","Offentlig og stat",2016
+"Kvalitetssikring av prosjektet Nytt, modernisert Folkeregister (MF)","Kvalitetssikrer","Kunnskap om identitetsforvaltning og autentisering, regelverksutvikling","Erfaring med oppfølging av skatteetatens prosjekter og digitalisering","Evne til å delta i kontaktmøter, samordningsmøter, kvalitetssikringsrapporter","Finansdepartementet","Offentlig og stat",2016
+"Group CIO","Ingen",,,,"Recover Nordic Danmark","Handel og industri",2016
+"Prosjektleder OOS – Ny plattform for SOB","Prosjektleder","Ubeskrevet i dokumentet","Ubeskrevet i dokumentet","Ubeskrevet i dokumentet","Ruter","Offentlig og stat",2016
+"Prosjektgjennomføring","Prosjektleder",,,,"DNB","Bank og forsikring",2017
+"Prosjektleder for detaljprosjekt for fremtidige HR-løsninger","Prosjektleder","Erfaring med prosjektledelse, utarbeidelse av prosjektplaner, koordinering av aktiviteter, og dokumentasjon i HR-systemer.","Tidligere erfaring med systemunderstøttelse innen HR, personal og lønn samt beste praksis tilnærminger.","Evne til å koordinere prosjektaktiviteter og utarbeide nødvendig dokumentasjon og presentasjoner.","Hias IKS","Kommuner",2017
+"Prosjektleder for BRO","Prosjektleder","Prosjektledelse, anskaffelse, IT-strategi","Erfaring med store anskaffelsesprosjekter involverende flere banker og finansinstitusjoner",,"Bits AS","Bank og forsikring",2017
+"Prosjektleder og prosjektmedarbeider innen forvaltningsrevisjon","Prosjektleder","Kompetanse innen rådgivning, prosjektledelse, og revisjon på forvaltningsrevisjonsoppdrag.","Erfaring med planlegging, etablering av undersøkelsesopplegg, gjennomføring av datainnsamling, analyse, vurdering og rapportering.",,"Oslo kommune, Kommunerevisjonen","Kommuner",2017
+"Program- og prosjektleder for IT sikkerhetsprogrammet","Prosjektleder","Kompetanse innen IT sikkerhet, cybersikkerhet, sikkerhetsarkitektur og sikkerhetsstyring","Erfaring med program- og prosjektledelse, samt utvikling og anskaffelse av administrative støtteverktøy","Evne til å bygge organisasjon, verktøy og teknikker for cybersikkerhet og forsvar mot cyberangrep","Norges Bank","Bank og forsikring",2017
+"Prosjektleder for kravspesifikasjon av analyseprodukter","Prosjektleder","Kompetanse i spesifikasjon av analyseprodukter og beslutningsstøtte","Erfaring med prosjektledelse og utvikling av analyseverktøy",,"Conecto AS","Bank og forsikring",2017
+"Kursholder i Endringsledelse","Endringsleder","Sertifisering eller kunnskap om ACMP Standard for endringsledelse","Erfaring som endringsleder og ønsket om videreutvikling","Strukturert tilnærming til endringsledelse","Holte Academy","Handel og industri",2017
+"Kvalitetssikring NVDB Referansesystem","Kvalitetssikrer","Kunnskap om NVDB (Nasjonal VegDataBank) og IT-referansesystemer","Erfaring med kvalitetssikringsprosesser og prosjekter knyttet til offentlig sektor","Nøyaktighet, analytiske evner, god kommunikasjon","Statens vegvesen","Offentlig forvaltning",2017
+"Lederstøtte for biblioteksjef og seksjonsledere","Endringsleder",,,,"Oslo Kommune-Kulturetaten","Kommuner",2017
+"Systemarkitekt for porteføljestyring","Arkitekt","Erfaring med etablering av prosess og styringsform for porteføljestyring","Operativ erfaring med porteføljestyringsprosessen og prosjektgjennomføring","Analytisk, strategisk tenkning, gjennomføringsevne","Lørenskog kommune","Kommuner",2017
+"Samfunnsøkonomisk analyse av Dataporten i grunnopplæringen","Analytiker","Kompetanse i samfunnsøkonomisk analyse, gevinstrealiseringsplaner og finansieringsmodellutvikling","Erfaring med samfunnsøkonomisk analyse og prosjektgjennomføring innen utdanningssektoren","Evne til samarbeid og tett dialog med prosjektgruppen","Senter for IKT i utdanningen","Offentlig og stat",2017
+"Samfunnsøkonomisk analyse, Finansieringsmodell og støtte til Feide 2.0/Dataporten","Analytiker","Kompetanse i samfunnsøkonomisk analyse og utvikling av finansieringsmodeller, kost/nytte analyse","Erfaring med kartlegging av bruk og behov i kommuner og fylkeskommuner, usikkerhetsvurdering","Evne til å utarbeide forslag til finansieringsmodell og vurdere videre utrulling av plattform","Senter for IKT i utdanningen/Utdanningsdirektoratet","Offentlig og stat",2017
+"Rådgiver","Rådgiver",,,,"Direktoratet for e-helse","Helse",2017
+"Porteføljekontor","Kontoransvarlig",,,,"Direktoratet for e-helse","Helse",2017
+"Utvikling Zoho Creator","Utvikler",,,,"Direktoratet for e-helse","Helse",2017
+"Prosjektleder for implementering av satsingen på et sterkt utvidet tilbud til barn og ungdom i bydelen","Prosjektleder","Virksomhetsstyring, porteføljestyring prosjektstyring, IKT governance, digitalisering og videreutvikling av virksomheten, endringsledelse ifm organisasjonsutviklingsprosjekter",,,,"Oslo kommune, bydel Stovner","Kommuner",2017
+"Rådgiver og prosjektleder","Prosjektleder",,,,"Vipps AS","Bank og forsikring",2017
+"Prosjektleder for digital samhandlingsløsning","Prosjektleder","Kunnskap i smidig utvikling, brukerhistorier, personas, impact map, prosjektveiviseren, ACMP, og Microsofts Power-plattform","Erfaring med ledelse av konsept- og gjennomføringsfase av digitale prosjekter","Evne til å arbeide smidig og trinnvis, gode kommunikasjonsferdigheter, samarbeidsevner på tvers av tjenestesteder","Oslo kommune, Sykehjemsetaten","Kommuner",2018
+"Kvalitetssikrer for HR-løsning","Kvalitetssikrer","Kvalitetssikring av konkurransegrunnlag innen HR-løsninger","Erfaring med kvalitetssikring og ferdigstillelse av konkurransegrunnlag for elektroniske løsninger","Prosessdriver med evne til å sikre ferdigstillelse av kravspesifikasjoner","Ruter AS","Offentlig og stat",2018
+"Prosjektleder for Arbeidstilsynets organisering","Prosjektleder","Bistå i strategiprosess, metode, fasilitering og tilrettelegging, samt erfaring med SWOT-analyse","Erfaring med prosjektledelse i offentlig sektor og prosessforbedringsarbeid","Evne til å koordinere og lede arbeid med prosjektgrupper og lede workshoper","Arbeidstilsynet","Offentlig sektor",2018
+"Delprosjektleder administrative systemer","Prosjektleder","Erfaring med etablering av IKT-systemer i kommunal kontekst, kunnskap om systemintegrasjoner og datakvalitet.","Erfaring i ledelse av IKT-prosjekter, spesielt i kommunal sammenslåing.","Strukturert, systematisk, god kommunikasjons- og lederevne.","Drammen kommune","Kommuner",2018
+"Rådgivning krav / dekning","Rådgivning",,,,"Eika Forsikring","Bank og forsikring",2018
+"Kommersielle betingelser / forhandlingsleder / kundeansvarlig","Forhandlingsleder",,,,"Eika Forsikring","Bank og forsikring",2018
+"Prosjektleder for EPJ-løftet","Prosjektleder","Utvikle IKT-verktøy for kvalitet i pasientbehandling, koordinering og iverksetting av koronatiltak.","Erfaring med prosjektledelse, bruk av teknologiske trender som datadrevet beslutningsstøtte, Smart app launch framework, konseptutvikling og anskaffelsesmetodikk.","Styring av prosjekter, risikohåndtering, rapportering til styringsgruppe, samarbeid i trepartssamarbeid.","Direktoratet for e-helse","Helse",2018
+"Koordinator for gevinstrealisering","Kvalitetssikrer","Kunnskap om gevinstrealisering, tilgangsstyring, GDPR, sikkerhetsplattform, risikostyring. Erfaring med APMGs Managing Benefits og DFØs veileder for gevinstrealisering.","Erfaring med koordinering og støttet prosjektleder for endringsledelse. Må ha jobbet med KPI bank, baseline målinger, verdsetting av gevinster, og endringstiltak.","God evne til å støtte prosjektleder ved behov for ekstra kapasitet innen kommunikasjon, opplæring eller endringsledelse.","Helse Sør-Øst RHF","Helse",2018
+"Kvalitetssikrer for KS1 Nasjonal løsning EPJ","Kvalitetssikrer","Erfaring med kvalitetssikring av konseptvalgutredning (KVU) i helseprosjekter samt kompetanse i kost/nytte-analyse.","Erfaring med ekstern kvalitetssikring av store komplekse prosjekter i helseområdet.","Analytiske evner, detaljorientert, evne til å gi objektive innsigelser og anbefalinger.","Finansdepartementet","Offentlig og stat",2018
+"KS2 kvalitetssikring for Buskerudbypakke 2","Kvalitetssikrer","KS2 iht. Finansdepartementets retningslinjer, usikkerhetsanalyser","Ukjent","Ukjent","Finansdepartementet","Offentlig og stat",2018
+"Kvalitetssikrer for MADS-prosjektet","Kvalitetssikrer","Kompetanse i virksomhetsarkitektur og bruk av Gartners modenhetsmodell. Kjennskap til IKT reglementet og Prosjektveiviseren.","Erfaring med å vurdere prosjekters gjennomføringsstrategi og evne, samt sammenligning av dagens praksis mot modenhetsmodeller.","Analytisk evne til å gjennomgå og forbedre prosjektet i henhold til foreslåtte rammevilkår.","Oslo kommune, bydel Stovner","Kommuner",2018
+"Løsningsarkitekt for Identitets- og tilgangsstyring","Arkitekt","","Erfaring med arkitekturrådgivning og dokumentasjon innen tilgangsstyring og IAM løsninger",,"Helse Sør-Øst RHF","Helse",2018
+"Løsningsarkitekt låneforvaltning","Arkitekt","Kunnskap om modellering av forretningsprosesser og -regler med BPMN og DMN, samt bruk av UML.","Erfaring med kravanalyse, spesifikasjon, og implementering av IT-systemer for låneforvaltning.","Ferdigheter i fasilitering og kvalitetssikring av løsningsspesifikasjoner.","Husbanken","Bank og forsikring",2018
+"Prosjektleder for prosjektet MtV (fra Mitt til Vårt)","Prosjektleder",,,,"Bits AS","Bank og forsikring",2018
+"Tjenestedesign for prosjektet 'Ny i Lørenskog'","Arkitekt","Erfaring med tjenestedesign og prosessanalyse, spesielt i offentlig sektor","Evne til å operasjonalisere tjenestedesign som metode og etablere metodikk for tjenesteutvikling.","Skal ha fokus på brukerperspektivet og behov for organisasjonsutvikling","Lørenskog kommune","Kommuner",2018
+"Kvalitetssikrer for ny skadeløsning","Kvalitetssikrer","Kompetanse innen kvalitetssikring av forretningssystemer","Erfaring med gjennomgang av kravspesifikasjoner for skadeforsikringsselskaper","Evne til å identifisere mangler og forbedringsområder i kravspesifikasjoner","Sparebank1 Forsikring","Bank og forsikring",2018
+"Prosjektleder for ny skadeløsning","Prosjektleder",,,,"SpareBank1 Forsikring","Bank og forsikring",2018
+"Kvalitetssikrer for ny skadeløsning","Kvalitetssikrer",,,,"SpareBank1 Forsikring","Bank og forsikring",2018
+"Program Manager for IT Transformation (ONE_IT)","Prosjektleder",,,,"Santander","Bank og forsikring",2018
+"Prosjektleder for ANPR-prosjektet","Prosjektleder",,,,"Tolldirektoratet","Offentlig og stat",2018
+"Prosjektleder for anskaffelser Norsk helsearkiv","Prosjektleder","Innkjøpsfaglig rådgivning, rådgivning innen valg av teknologi og arkitektur","Erfaring med prosjekt- og prosessledelse i offentlige anskaffelser, praktisk gjennomføring av anbudskonkurranser","Evne til å sikre fremdrift og gjennomføre prosjekter i henhold til regelverket for offentlige anskaffelser","Norsk helsearkiv, Arkivverket","Offentlig og stat",2018
+"Assisterende fagdirektør IT","Konsulent","Administrative oppgaver innen IT-drift, ledelse av arkitekturgruppa","Erfaring med ledelse og støtte i mindre prosjekter","Evne til å utføre administrative oppgaver og lede arkitekturgrupper","Norsk helsearkiv, Arkivverket","Offentlig og stat",2020
+"Prosjektleder for MADS","Prosjektleder","Erfaring med konseptutvikling, test og produksjonssetting av prosjekter.","Tidligere erfaring som prosjektleder i digitale utviklingsprosjekter, spesielt innen velferdsteknologi.","Evne til å lede og styre prosjekter, gode kommunikasjonsferdigheter, evne til å samarbeide med ulike interessenter.","Oslo kommune, bydel Stovner","Kommuner",2018
+"Prosjektleder EPJ-løftet","Prosjektleder",,,,"Direktoratet for e-helse","Helse",2018
+"Prosjektleder fusjon Eika Banker","Prosjektleder",,,,"Eika Gruppen AS","Bank og forsikring",2018
+"Hovedprosjektleder","Prosjektleder",,,,"Drammen kommune","Kommuner",2018
+"Delprosjektleder administrative systemer","Prosjektleder",,,,"Drammen kommune","Kommuner",2018
+"Delprosjektleder tekniske systemer","Prosjektleder",,,,"Drammen kommune","Kommuner",2018
+"Kommunikasjonsansvarlig","Endringsleder",,,,"Drammen kommune","Kommuner",2018
+"Prosessbistand rekruttering","Ingen","Utarbeidelse av stillingsbeskrivelser, annonsering, søknadsvurderinger, gjennomføring av intervjuer, referansesjekking","Erfaring med gjennomføring av rekrutteringskampanjer","Ingen","Bits AS","Bank og forsikring",2018
+"Samfunnsøkonom for analyse av felles grunnmur","Samfunnsøkonom","Kompetanse innen samfunnsøkonomisk analyse, kartlegging, vurdering og verdsetting av nytte- og kostnadsvirkninger, usikkerhetsanalyse, og vurdering av fordelingsvirkninger.","Erfaring med samfunnsøkonomisk lønnsomhet og analyse av digitale tjenester.","Analytisk, systematisk og beslutningsorientert.","Direktoratet for e-helse","Helse",2018
+"Prosjektleder for OneIT Core Banking Harmonization","Prosjektleder","Erfaring med harmonisering av produktporteføljer og systemoppsett i kjernebanksystemer","Erfaring med migrering av porteføljer og avvikling av kjernebanksystemer i Norden",,,"Santander","Bank og forsikring",2019
+"Prosjektleder for NoPeK","Prosjektleder","Kunnskap om anskaffelse av kjernesystemer og funksjonelle kravspesifikasjoner i pensjonsbransjen.","Erfaring med prosjektledelse av komplekse anskaffelsesprosjekter i finans- eller forsikringsbransjen.","Sterk kommunikasjonsevne, analytisk, evne til å koordinere ulike interessenter.","Sparebank1 Forsikring","Bank og forsikring",2019
+"Prosjektleder for Kunnskapsportalprosjektet","Prosjektleder","Kompetanse i smidig prosjektmetodikk, utvikling av styrende dokumenter og prosjektdokumentasjon, inkludert mål og ambisjoner, behov og krav, interessent-analyse, avhengighet- og risikooversikt, og overordnet prosjektplan","Erfaring med oppfølging av etablering og utvikling av portaler samt anskaffelsesprosesser","Evne til å rapportere til styringsgruppen og erfaringsoverføring","Senter for oljevern og marint miljø","Offentlig og stat",2019
+"Prosjektleder i forvaltningsrevisjonsprosjekter","Prosjektleder",,,,"Oslo kommune, Kommunerevisjonen","Kommuner",2019
+"Kommunikasjonsansvarlig i prosjektet","Kommunikasjonsansvarlig","Erfaring med å planlegge kommunikasjonsaktiviteter, utarbeide nyhetssaker, designe informasjonssider, og gjennomføre informasjonsmøter.","Utstrakt samarbeid med delprosjektledere, fagressurser, og prosjekteier.","Samarbeidsdyktig med evne til å utarbeide og presentere informasjon effektivt.","Drammen kommune","Kommuner",2019
+"Prosjektleder for forprosjekt for ny nordisk IT-løsning for søknadshåndtering og CRM","Prosjektleder",,,,"Santander Consumer Bank AS","Bank og forsikring",2019
+"Funksjonell arkitekt i EDiT programmet","Arkitekt","Kompetanse innen utforming av løsninger, integrasjoner og tjenester.","Erfaring fra gevinstkartlegging og gevinstplanlegging i komplekse prosjekter.","Evne til å arbeide med prosjekter som innebærer endringer i verdikjeden og implementering av nye løsninger.","Helsedirektoratet","Helse",2019
+"HR utvikling","Endringsleder","Kompetanse innen organisasjons-, leder og kompetanseutviklingstiltak","Erfaring med utvikling av intern prosjektmodell og organisering av utviklingstiltak","Coachende lederstil, kommunikasjonsevner","Advokatfirmaet Haavind","Handel og industri",2019
+"Programkontorleder/assisterende programleder","Prosjektleder","Erfaring med etablering og vedlikehold av rutiner og prosesser for styring, kontroll, rapportering og dokumentasjon; kunnskap om MS SharePoint, Clarity PPM og Public 360; kjennskap til Prosjektveiviseren, PRINCE2, MSP, Managing Benefits.","Erfaring med daglig ledelse av programkontor, styring og prioritering av personell, fasilitering av prosjekter, kvalitetssikring av budsjetter, rapportering og overvåking av programrisiko.","Evne til å fasilitere styringsgruppe- og programstyremøter, overordnet styring og rapportering, endringsledelse, utarbeidelse av KPI-er og realisering av gevinster.","Helse Sør-Øst RHF","Helse",2019
+"Prosjektleder for kontanthåndtering i normalsituasjonen","Prosjektleder","MS Office","Erfaring med prosjektledelse og bankenes lovpålagte krav rundt kontanthåndtering","Evne til å lede prosjekter, fasilitere og lede møter, analysere og vurdere alternativer","Bits AS","Bank og forsikring",2019
+"Intern kvalitetssikrer","Kvalitetssikrer","Kunnskap om KS metodikk","Erfaring med kvalitetssikring av prosjekter","Tett samarbeidsevne, tydelig kommunikasjon","Finansdepartementet","Offentlig og stat",2019
+"KS1 Hammerfest lufthavn","Kvalitetssikrer","Kompetanse i konseptvalgsutredning og kostnads- og usikkerhetsanalyse","Erfaring med gjennomgang av problembeskrivelse, behovsanalyse, strategi og mulighetsstudie","Evne til å håndtere utfordringer knyttet til behovsanalyser og kostnadsmodeller","Finansdepartementet","Offentlig og stat",2019
+"Ekstern kvalitetssikrer for ITS-Programmet","Kvalitetssikrer","Erfaring med kvalitetssikring av prosjektprosesser, herunder budsjett og prognoser, risikovurdering, fremdrifts- og milepælsplaner.","Tidligere erfaring med kvalitetssikring og rådgivning innen komplekse teknologiprosjekter.","Evne til å gjennomføre selvstendige vurderinger og levere skriftlige rapporter.","Statens vegvesen","Offentlig og stat",2019
+"Prosjektleder for DiffIT – virksomhetskritiske systemer","Prosjektleder",,,,"Norges Bank","Bank og forsikring",2019
+"Rådgiver for anskaffelse av Enterprise Service Management løsning","Rådgiver",,,,"Norges Bank","Bank og forsikring",2019
+"Ansvarlig for PMO","Prosjektleder","Programlederstøtte, planlegging, prosjektmetodikk, verktøystøtte, rapportering","Erfaring med økonomistyring, budsjettering, estimering og forecasting","Evne til å bistå Programme Manager, følge opp prosjekter administrativt med fokus på kost, tid, kvalitet, risiko og gevinster","Santander","Bank og forsikring",2019
+"Programleder for Program Kodeverk og Terminologi (PKT)","Programleder","Dyp kompetanse innen nasjonal e-helseportefølje og helsefaglige kodeverk og terminologi.","Erfaring med programledelse i tverrfaglige team og samordning innen helsesektoren.","Evne til å fasilitere, prosessere og koordinere årlige revisjoner og styringsdokumenter.","Direktoratet for e-helse","Helse","ukjent"
+"Prosessleder terminologi i EPJ","Prosessleder","Kunnskap om SNOMED CT, kodeverk og terminologi innen helsesektoren","Erfaring med forbedring av helsetjenester gjennom kodeverk og terminologi","Evne til å lede og styre prosjekter, planlegging, gjennomføring og rapportering","Direktoratet for e-helse","Helse",2019
+"Prosjekt-/prosessleder Digital modenhet","Prosessleder","Prosessledelse, Digital kompetanse, Endringsledelse","Erfaring med digital transformasjon og prosessledelse","Trygghet, inspirasjon, evne til å engasjere og samordne team","Lånekassen","Offentlig og stat",2019
+"Prosjektleder MF Helse kommune","Prosjektleder","Koordinere helsesektorens overgang til nytt folkeregister og digitalisere innrapportering av dødsfall.","Erfaring med planlegging og innføring av elektroniske meldinger i helsesektoren, dialog og samarbeid med KS.","Kunne drive arbeidet ut mot kommuner, samarbeide tett med KS.","Direktoratet for e-helse","Helse",2019
+"Teamleder for anskaffelse av trygghetsskapende tjenester","Prosjektleder","Kompetanse på helsefag, digitalisering/IKT, bærekraft, anskaffelse og innkjøp","Erfaring med planlegging, ledelse av anskaffelsesstrategi og gjennomføring av anskaffelsesprosess","Evne til endringsledelse, fremdriftssikring, dialog med oppdragsgiver, lede leveranseteam","Drammen kommune","Kommuner",2019
+"Prosessleder for utredning om kunstig intelligens i helse","Prosessleder","Kunnskap om kunstig intelligens og helse- og omsorgstjenester","Er

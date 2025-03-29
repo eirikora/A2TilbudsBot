@@ -57,10 +57,25 @@ try:
     with open('mapping.csv', 'a', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
 
+        root_folder = os.path.dirname(DISKPATH)
+        current_folder = ""
+        folder_fields = {}
         for root_dir, dirs, files in os.walk(DISKPATH):
             for file in files:
                 file_path = os.path.join(root_dir, file)
+                file_folder = os.path.dirname(file_path)
+                file_main_folder = os.path.relpath(file_folder, DISKPATH)
+                parts = file_main_folder.split(os.sep)
+                file_main_folder = parts[0] if parts and parts[0] != '.' else ''
                 last_modified = os.path.getmtime(file_path)
+
+                if file_main_folder != current_folder: # Get hold of Sharepoint folder field data (as it also applies to files in that folder)
+                    # print(f"Current folder: {file_folder}")
+                    current_folder = file_main_folder
+                    print(f"\nLASTER NED MAPPE: {file_main_folder}")
+                    folder_fields = {}
+                    # folder_fields = requestSharepointFields(sharepoint_site=sharepoint_site, site_name=site_name, drive_name=drive_name, file_relative_path=FOLDER_PATH.replace('\\', '/'))
+                    # print(f"FOLDER HAR FIELDS: {folder_fields}\n")
 
                 if file_path not in file_dates or file_dates[file_path] < last_modified:
                     # Oppdater filens siste endringsdato
@@ -100,8 +115,14 @@ try:
                         writer.writerow([unique_name, url])
 
                         # Hent Sharepoint metadata for file og lagre
+                        if folder_fields == {} and file_main_folder != "": # Hent først folder_fields om ikke root og de ikke har blitt hentet enda
+                            # print(f"GETTING FOLDER DATA FOR: {file_main_folder}")
+                            folder_fields = requestSharepointFields(sharepoint_site=sharepoint_site, site_name=site_name, drive_name=drive_name, file_relative_path=file_main_folder.replace('\\', '/'))
                         file_fields = requestSharepointFields(sharepoint_site=sharepoint_site, site_name=site_name, drive_name=drive_name, file_relative_path=PATH.replace('\\', '/'))
-                        file_metadata[unique_name] = file_fields
+                        # print(f"File has fields: {file_fields}\n")
+                        all_fields = {**folder_fields, **file_fields}
+                        # print(f"All fields are then: {all_fields} \n\n")
+                        file_metadata[unique_name] = all_fields
                         #print(f"SAVED {unique_name} file_fields!")
 
                         # Insert header at top and write file
