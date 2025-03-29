@@ -24,7 +24,7 @@ def rename_key(data, old_key, new_key):
 
 def make_header(file_fields):
     # List of fields you want to include in the header text
-    fields = ['Dokumentnavn', 'Status', 'Kunde', 'Marked', 'Dokumenttype', 'Modified']
+    fields = ['Dokumentnavn', 'Dokumenttype', 'Status', 'Kunde', 'Marked', 'Modified']
     
     # Start with an empty string for the header text
     header_text = "Sharepoint Metadata:\n"

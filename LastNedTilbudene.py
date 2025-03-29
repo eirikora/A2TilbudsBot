@@ -118,7 +118,13 @@ try:
                         if folder_fields == {} and file_main_folder != "": # Hent først folder_fields om ikke root og de ikke har blitt hentet enda
                             # print(f"GETTING FOLDER DATA FOR: {file_main_folder}")
                             folder_fields = requestSharepointFields(sharepoint_site=sharepoint_site, site_name=site_name, drive_name=drive_name, file_relative_path=file_main_folder.replace('\\', '/'))
+                            if folder_fields['Status'] == "Historisk" or folder_fields['Status'] == "Gyldig": # Fiks fortolkning:
+                                folder_fields['Status'] == "Vunnet"
+                            if folder_fields['Dokumenttype'] == 'Referanse':
+                                folder_fields['Status'] == "Vunnet"
                         file_fields = requestSharepointFields(sharepoint_site=sharepoint_site, site_name=site_name, drive_name=drive_name, file_relative_path=PATH.replace('\\', '/'))
+                        if file_fields['Status'] == "Historisk" or file_fields['Status'] == "Gyldig": # Fiks fortolkning:
+                            file_fields['Status'] == "Vunnet"
                         # print(f"File has fields: {file_fields}\n")
                         all_fields = {**folder_fields, **file_fields}
                         # print(f"All fields are then: {all_fields} \n\n")
@@ -126,7 +132,7 @@ try:
                         #print(f"SAVED {unique_name} file_fields!")
 
                         # Insert header at top and write file
-                        text = make_header(file_fields) + "Document body:\n" + text
+                        text = make_header(all_fields) + "Document body:\n" + text
                         with open(os.path.join(output_folder, unique_name), 'w', encoding='utf-8') as text_file:
                             text_file.write(text)
 
