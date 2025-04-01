@@ -332,6 +332,8 @@ def oppsummer_tilbud(file_path):
 
         # Print the full file path
         # print("File saved to:", output_file_path)
+    else:
+        print(f"SKIPPING already created: {output_file_path}")
 
     return output_file_path
 
@@ -430,7 +432,8 @@ for filename in downloaded_file_urls.keys():
         # Concatenate all files in project into just one file.
         project_out_file = f"{project_dir}\\{projects_found:04d}_{previous_rootfolder}.txt"
         project_link = rooturl + root_folder
-        project_path_urls[project_out_file] = previous_link
+        if previous_link != "_undefined_":
+            project_path_urls[project_out_file] = previous_link
         with open(project_out_file, 'w', encoding='utf-8') as p_outfile:
             unquoted_previous_rootfolder = urllib.parse.unquote(previous_rootfolder, encoding='utf-8')
             p_outfile.write(f"TILBUD:{unquoted_previous_rootfolder}\n")
@@ -469,7 +472,8 @@ for filename in downloaded_file_urls.keys():
 # Concatenate files in the very last project folder into just one file.
 project_out_file = f"{project_dir}\\{projects_found:04d}_{previous_rootfolder}.txt"
 project_link = rooturl + root_folder
-project_path_urls[project_out_file] = previous_link
+if previous_link != "_undefined_":
+    project_path_urls[project_out_file] = previous_link
 with open(project_out_file, 'w', encoding='utf-8') as p_outfile:
     unquoted_previous_rootfolder = urllib.parse.unquote(previous_rootfolder, encoding='utf-8')
     p_outfile.write(f"TILBUD:{unquoted_previous_rootfolder}\n")
@@ -502,7 +506,7 @@ with open('project_mapping.csv', 'w', newline='', encoding='utf-8') as csvfile:
         filename = os.path.basename(project_file)
         writer.writerow([filename, url])
 
-#Ekstraher Kompetansekrav fra alle forespørsler
+""" #Ekstraher Kompetansekrav fra alle forespørsler
 alle_kompetansekrav = []
 if projects_found > 0:
     # Hent ut alle kompetansekrav fra alle prosjektene
@@ -531,7 +535,8 @@ with open('kompetansekrav.csv', 'w', newline='', encoding='utf-8') as csvfile:
             Årstall = kompetanse_krav["Årstall"]
             if Konsulentrolle.lower() != "ingen" and Konsulentrolle != "":
                 writer.writerow([Konsulentrolle, Rollekategori, Kompetansekrav, Erfaringskrav, Konsulentegenskaper, Kundenavn, Bransje, Årstall])
-#exit(0)
+#exit(0) """
+
 # Oppsummer alle tilbudsdokumenter så de er søkbare
 summarized_tilbud_urls = {}
 if projects_found > 0:
